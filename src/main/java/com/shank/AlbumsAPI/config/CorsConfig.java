@@ -18,7 +18,7 @@ public class CorsConfig {
         // ✅ Frontend URLs
         config.setAllowedOrigins(List.of(
             "http://localhost:3000",
-            "https://albumix.vercel.app"
+            "https://albumix-xi.vercel.app/"
         ));
 
         // ✅ HTTP methods

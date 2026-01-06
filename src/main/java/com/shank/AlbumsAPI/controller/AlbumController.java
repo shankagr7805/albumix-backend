@@ -22,6 +22,7 @@ import com.shank.AlbumsAPI.util.apputils.AppUtil;
 import com.shank.AlbumsAPI.util.constants.AlbumError;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -175,6 +176,37 @@ public class AlbumController {
         }
         return response;
     }
+
+    @GetMapping(value = "/albums/{album_id}", produces = "application/json")
+    @ApiResponse(responseCode = "200", description = "List of albums")
+    @ApiResponse(responseCode = "401", description = "Token missing")
+    @ApiResponse(responseCode = "403", description = "Token error")
+    @Operation(summary = "List album by album id")
+    @SecurityRequirement(name = "demo-api")
+    public ResponseEntity<AlbumViewDTO> albums_by_id(@PathVariable long album_id, Authentication authentication) {
+        String email = authentication.getName();
+        Optional<Account> optionalAccount = accountService.findByEmail(email);
+        Account account = optionalAccount.get();
+        Optional<Album> optionalAlbum = albumService.findById(album_id);
+        Album album;
+        if(optionalAlbum.isPresent()) {
+            album = optionalAlbum.get();
+        } else {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+        if(account.getId() != album.getAccount().getId()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
+        }
+        List<PhotoDTO> photos = new ArrayList<>();
+        for (Photo photo : photoService.findByAlbumId(album.getId())) {
+            String link = "/albums/"+album.getId()+"/photos/"+photo.getId()+"/download-photo"; 
+            photos.add(new PhotoDTO(photo.getId(), photo.getName(), photo.getDescription(), link));
+        }
+        AlbumViewDTO albumViewDTO = new AlbumViewDTO(album.getId(), album.getName(), album.getDescription(), photos);
+        
+        return ResponseEntity.ok(albumViewDTO);
+    }
+
 
     // ===============================
     // Download Original Photo

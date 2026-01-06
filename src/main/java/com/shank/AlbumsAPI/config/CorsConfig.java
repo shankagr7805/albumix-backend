@@ -15,10 +15,10 @@ public class CorsConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        // ✅ Frontend URLs
+        // ✅ Frontend URLs (NO trailing slash)
         config.setAllowedOrigins(List.of(
             "http://localhost:3000",
-            "https://albumix-xi.vercel.app/"
+            "https://albumix-xi.vercel.app"
         ));
 
         // ✅ HTTP methods
@@ -29,7 +29,7 @@ public class CorsConfig {
         // ✅ Headers
         config.setAllowedHeaders(List.of("*"));
 
-        // ✅ JWT header
+        // ✅ Allow JWT / cookies
         config.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

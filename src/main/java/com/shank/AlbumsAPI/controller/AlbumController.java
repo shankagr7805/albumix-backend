@@ -94,11 +94,6 @@ public class AlbumController {
         List<String> errors = new ArrayList<>();
 
         for (MultipartFile file : files) {
-            String contentType = file.getContentType();
-            if (contentType == null || !contentType.startsWith("image/")) {
-                errors.add(file.getOriginalFilename());
-                continue;
-            }
             try {
                 String originalName = Objects.requireNonNull(file.getOriginalFilename());
                 String random = RandomStringUtils.secure().nextAlphanumeric(10);

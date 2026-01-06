@@ -31,6 +31,9 @@ public class Photo {
 
     private String fileName;
 
+    private String cloudinaryPublicId;
+    private String cloudinaryThumbnailUrl;
+
     @ManyToOne
    @JoinColumn(name = "album_id", referencedColumnName = "id", nullable = false)
     private Album album;

@@ -69,27 +69,28 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf
-                    .ignoringRequestMatchers("/db-console/**")
-                    .disable()
-                )
-                .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/api/v2/auth/token").permitAll()
-                        .requestMatchers("/api/v2/auth/users/add").permitAll()
-                        .requestMatchers("/api/v2/auth/users").hasAuthority("SCOPE_ADMIN")
-                        .requestMatchers("/api/v2/auth/users/{user_id}/update-authorities").hasAuthority("SCOPE_ADMIN")
-                        .requestMatchers("/api/v2/auth/profile/**").authenticated()
-                        .requestMatchers("/api/v2/albums/**").authenticated()
-                        .requestMatchers("/api/v2/cloudinary/**").authenticated()
-                        .requestMatchers("/db-console/**").permitAll()
-                        .requestMatchers("/swagger-ui/**").permitAll()
-                        .requestMatchers("/v3/api-docs/**").permitAll()
-                        .anyRequest().authenticated())
-                .oauth2ResourceServer(oauth2 -> oauth2.jwt(withDefaults()))
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .headers(headers -> headers
-                    .frameOptions(frame -> frame.sameOrigin())
-                );
+            .cors(cors -> {})
+            .csrf(csrf -> csrf
+                .ignoringRequestMatchers("/db-console/**")
+                .disable()
+            )
+            .authorizeHttpRequests(authorize -> authorize
+                    .requestMatchers("/api/v2/auth/token").permitAll()
+                    .requestMatchers("/api/v2/auth/users/add").permitAll()
+                    .requestMatchers("/api/v2/auth/users").hasAuthority("SCOPE_ADMIN")
+                    .requestMatchers("/api/v2/auth/users/{user_id}/update-authorities").hasAuthority("SCOPE_ADMIN")
+                    .requestMatchers("/api/v2/auth/profile/**").authenticated()
+                    .requestMatchers("/api/v2/albums/**").authenticated()
+                    .requestMatchers("/api/v2/cloudinary/**").authenticated()
+                    .requestMatchers("/db-console/**").permitAll()
+                    .requestMatchers("/swagger-ui/**").permitAll()
+                    .requestMatchers("/v3/api-docs/**").permitAll()
+                    .anyRequest().authenticated())
+            .oauth2ResourceServer(oauth2 -> oauth2.jwt(withDefaults()))
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .headers(headers -> headers
+                .frameOptions(frame -> frame.sameOrigin())
+            );
         return http.build();
     }
 }

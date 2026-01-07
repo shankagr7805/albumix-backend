@@ -152,7 +152,7 @@ public class AlbumController {
                 photo.setName(photoPayloadDTO.getName());
                 photo.setDescription(photoPayloadDTO.getDescription());
                 photoService.save(photo);
-                PhotoViewDTO photoViewDTO = new PhotoViewDTO(photo.getId(), photoPayloadDTO.getName(), photoPayloadDTO.getDescription());
+                PhotoViewDTO photoViewDTO = new PhotoViewDTO(photo.getId(), photoPayloadDTO.getName(), photoPayloadDTO.getDescription(), photo.getCloudinaryThumbnailUrl());
                 return ResponseEntity.ok(photoViewDTO);
             } else {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
@@ -373,7 +373,7 @@ public class AlbumController {
                 photo.setAlbum(album);
 
                 photoService.save(photo);
-                success.add(new PhotoViewDTO(photo.getId(), photo.getName(), photo.getDescription()));
+                success.add(new PhotoViewDTO(photo.getId(), photo.getName(), photo.getDescription(), photo.getCloudinaryThumbnailUrl()));
 
             } catch (Exception e) {
                 log.error(AlbumError.PHOTO_UPLOAD_ERROR.toString(), e);

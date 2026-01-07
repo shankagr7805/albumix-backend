@@ -18,4 +18,6 @@ public class PhotoViewDTO {
     private String name;
 
     private String description;
+
+     private String cloudinaryThumbnailUrl;
 }

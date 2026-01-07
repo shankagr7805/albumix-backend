@@ -1,5 +1,6 @@
 package com.shank.AlbumsAPI.model;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -32,6 +33,8 @@ public class Photo {
     private String fileName;
 
     private String cloudinaryPublicId;
+
+    @Column(name = "cloudinary_thumbnail_url")
     private String cloudinaryThumbnailUrl;
 
     @ManyToOne

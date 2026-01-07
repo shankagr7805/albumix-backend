@@ -1,12 +1,9 @@
 package com.shank.AlbumsAPI.controller;
 
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.nio.file.*;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
-import java.awt.Image;
-import java.awt.Graphics2D;
 
 import javax.imageio.ImageIO;
 
@@ -40,6 +37,8 @@ import lombok.extern.slf4j.Slf4j;
 public class AlbumController {
 
     static final String PHOTOS_FOLDER_NAME = "photos";
+    static final String THUMBNAIL_FOLDER_NAME = "thumbnails";
+    static final int THUMBNAIL_WIDTH = 300;
 
     @Autowired
     private AccountService accountService;
@@ -97,7 +96,7 @@ public class AlbumController {
                     return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
                 } 
             } else {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
             }
             
             album.setName(albumPayloadDTO.getName());
@@ -105,12 +104,8 @@ public class AlbumController {
             album = albumService.save(album);
             List<PhotoDTO> photos = new ArrayList<>();
             for(Photo photo : photoService.findByAlbumId(album.getId())) {
-                photos.add(new PhotoDTO(
-                    photo.getId(),
-                    photo.getName(),
-                    photo.getDescription(),
-                    "/api/v2/public/thumbnails/" + album.getId() + "/" + photo.getId()
-                ));
+                String link = "/albums/"+album.getId()+"/photos/"+photo.getId()+"/download-photo"; 
+                photos.add(new PhotoDTO(photo.getId(), photo.getName(), photo.getDescription(), link));
             }
             
             AlbumViewDTO albumViewDTO = new AlbumViewDTO(album.getId(), album.getName(), album.getDescription(), photos);
@@ -142,7 +137,7 @@ public class AlbumController {
                     return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
                 } 
             } else {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
             }
             Optional<Photo> optionalPhoto = photoService.findById(photo_id);
             if(optionalPhoto.isPresent()) {
@@ -156,7 +151,7 @@ public class AlbumController {
                 PhotoViewDTO photoViewDTO = new PhotoViewDTO(photo.getId(), photoPayloadDTO.getName(), photoPayloadDTO.getDescription());
                 return ResponseEntity.ok(photoViewDTO);
             } else {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
             }
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
@@ -181,7 +176,7 @@ public class AlbumController {
                     return ResponseEntity.status(HttpStatus.FORBIDDEN).body("An error occurred while deleting the photo.");
                 } 
             } else {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Failed to delete photo");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Failed to delete photo");
             }
             Optional<Photo> optionalPhoto = photoService.findById(photo_id);
             if(optionalPhoto.isPresent()) {
@@ -190,25 +185,13 @@ public class AlbumController {
                     return ResponseEntity.status(HttpStatus.FORBIDDEN).body("An error occurred while deleting the photo.");
                 }
 
-                // delete original
-                AppUtil.delete_photo_from_path(
-                    photo.getFileName(),
-                    PHOTOS_FOLDER_NAME,
-                    album_id
-                );
-
-                // delete thumbnail
-                AppUtil.delete_photo_from_path(
-                    photo.getThumbnailFileName(),
-                    PHOTOS_FOLDER_NAME,
-                    album_id
-                );
-
+                AppUtil.delete_photo_from_path(photo.getFileName(), PHOTOS_FOLDER_NAME, album_id);
+                AppUtil.delete_photo_from_path(photo.getFileName(), THUMBNAIL_FOLDER_NAME, album_id);
                 photoService.delete(photo);  
 
                 return ResponseEntity.status(HttpStatus.ACCEPTED).body("Photo deleted successfully.");
             } else {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Failed to delete photo");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Failed to delete photo");
             }
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("An error occurred while deleting the photo.");
@@ -229,12 +212,8 @@ public class AlbumController {
         for (Album album : albumService.findByAccount_id(account.getId())) {
             List<PhotoDTO> photos = new ArrayList<>();
             for(Photo photo : photoService.findByAlbumId(album.getId())) {
-                photos.add(new PhotoDTO(
-                    photo.getId(),
-                    photo.getName(),
-                    photo.getDescription(),
-                    "/api/v2/public/thumbnails/" + album.getId() + "/" + photo.getId()
-                ));
+                String link = "/albums/"+album.getId()+"/photos/"+photo.getId()+"/download-photo"; 
+                photos.add(new PhotoDTO(photo.getId(), photo.getName(), photo.getDescription(), link));
             }
             albums.add(new AlbumViewDTO(album.getId(), album.getName(), album.getDescription(), photos));
         }
@@ -257,19 +236,15 @@ public class AlbumController {
         if(optionalAlbum.isPresent()) {
             album = optionalAlbum.get();
         } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
         }
         if(account.getId() != album.getAccount().getId()) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
         }
         List<PhotoDTO> photos = new ArrayList<>();
         for (Photo photo : photoService.findByAlbumId(album.getId())) {
-            photos.add(new PhotoDTO(
-                photo.getId(),
-                photo.getName(),
-                photo.getDescription(),
-                "/api/v2/public/thumbnails/" + album.getId() + "/" + photo.getId()
-            ));
+            String link = "/albums/"+album.getId()+"/photos/"+photo.getId()+"/download-photo"; 
+            photos.add(new PhotoDTO(photo.getId(), photo.getName(), photo.getDescription(), link));
         }
         AlbumViewDTO albumViewDTO = new AlbumViewDTO(album.getId(), album.getName(), album.getDescription(), photos);
         
@@ -294,25 +269,14 @@ public class AlbumController {
                     return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
                 } 
             } else {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
             }
 
             for(Photo photo : photoService.findByAlbumId(album.getId())) {
                 if(photo == null) continue;
-                // delete original
-                AppUtil.delete_photo_from_path(
-                    photo.getFileName(),
-                    PHOTOS_FOLDER_NAME,
-                    album_id
-                );
-
-                // delete thumbnail
-                AppUtil.delete_photo_from_path(
-                    photo.getThumbnailFileName(),
-                    PHOTOS_FOLDER_NAME,
-                    album_id
-                );
-                photoService.delete(photo);
+                photoService.delete(photo);  
+                AppUtil.delete_photo_from_path(photo.getFileName(), PHOTOS_FOLDER_NAME, album_id);
+                AppUtil.delete_photo_from_path(photo.getFileName(), THUMBNAIL_FOLDER_NAME, album_id);
             }
             albumService.deleteAlbum(album);
 
@@ -322,99 +286,87 @@ public class AlbumController {
         }
     }
 
-    @PostMapping(value = "/albums/{album_id}/upload-photos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @SuppressWarnings("null")
+    @PostMapping(value = "/albums/{album_id}/upload-photos", consumes = { "multipart/form-data" })
     @Operation(summary = "Upload photo in album")
     @SecurityRequirement(name = "demo-api")
-    public ResponseEntity<?> uploadPhotos(
-            @RequestPart MultipartFile[] files,
-            @PathVariable long album_id,
-            Authentication auth) {
+    public ResponseEntity<List<HashMap<String, List<?>>>> photos(@RequestPart(required = true) MultipartFile[] files, @PathVariable long album_id, Authentication authentication) {
+        String email = authentication.getName();
+        Optional<Account> optionalAccount = accountService.findByEmail(email);
+        Account account = optionalAccount.get();
 
-        Account account = accountService.findByEmail(auth.getName()).orElseThrow();
-        Album album = albumService.findById(album_id).orElseThrow();
-
-        if (album.getAccount().getId() != account.getId()) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
-
-        List<PhotoViewDTO> success = new ArrayList<>();
-        List<String> errors = new ArrayList<>();
-
-        for (MultipartFile file : files) {
-            try {
-                if (file.getContentType() == null || !file.getContentType().startsWith("image/")) {
-                    errors.add(file.getOriginalFilename());
-                    continue;
-                }
-
-                String originalName = Objects.requireNonNull(file.getOriginalFilename());
-                String random = RandomStringUtils.secure().nextAlphanumeric(10);
-                String finalName = random + "_" + originalName;
-
-                // ✅ READ FILE ONCE
-                byte[] bytes = file.getBytes();
-
-                // 1️⃣ SAVE ORIGINAL LOCALLY
-                String path = AppUtil.get_photo_upload_path(finalName, PHOTOS_FOLDER_NAME, album_id);
-                Files.write(
-                    Paths.get(path),
-                    bytes,
-                    StandardOpenOption.CREATE,
-                    StandardOpenOption.TRUNCATE_EXISTING
-                );
-
-                /* ---------- 2️⃣ THUMBNAIL GENERATE (LOCAL) ---------- */
-                BufferedImage originalImage = ImageIO.read(new ByteArrayInputStream(bytes));
-
-                int thumbWidth = 300;
-                int thumbHeight = (originalImage.getHeight() * thumbWidth) / originalImage.getWidth();
-
-                Image scaledImage = originalImage.getScaledInstance(
-                    thumbWidth,
-                    thumbHeight,
-                    Image.SCALE_SMOOTH
-                );
-
-                BufferedImage thumbnail = new BufferedImage(
-                    thumbWidth,
-                    thumbHeight,
-                    BufferedImage.TYPE_INT_RGB
-                );
-
-                Graphics2D g2d = thumbnail.createGraphics();
-                g2d.drawImage(scaledImage, 0, 0, null);
-                g2d.dispose();
-
-                String thumbName = "thumb_" + finalName;
-                String thumbPath = AppUtil.get_photo_upload_path(thumbName, PHOTOS_FOLDER_NAME, album_id);
-
-                ImageIO.write(thumbnail, "jpg", Paths.get(thumbPath).toFile());
-
-                // 3️⃣ SAVE DB
-                Photo photo = new Photo();
-                photo.setName(originalName);
-                photo.setOriginalFileName(originalName);
-                photo.setFileName(finalName);
-                photo.setAlbum(album);
-                photo.setThumbnailFileName(thumbName);
-
-                photoService.save(photo);
-                success.add(new PhotoViewDTO(photo.getId(), photo.getName(), photo.getDescription()));
-
-            } catch (Exception e) {
-                log.error(AlbumError.PHOTO_UPLOAD_ERROR.toString(), e);
-                errors.add(file.getOriginalFilename());
+        Optional<Album> optionalAlbum = albumService.findById(album_id);
+        Album album;
+        if (optionalAlbum.isPresent()) {
+            album = optionalAlbum.get();
+            if (account.getId() != album.getAccount().getId()) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
             }
+        } else {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
         }
+        List<PhotoViewDTO> fileNamesWithSuccess = new ArrayList<>();
+        List<String> fileNamesWithError = new ArrayList<>();
 
-        return ResponseEntity.status(errors.isEmpty() ? HttpStatus.CREATED : HttpStatus.MULTI_STATUS)
-        .body(Map.of("SUCCESS", success, "ERRORS", errors));
+        Arrays.asList(files).stream().forEach(file -> {
+            String contentType = file.getContentType();
+            if (contentType.equals("image/png") ||
+                    contentType.equals("image/jpg") ||
+                    contentType.equals("image/jpeg")) {
+
+                int length = 10;
+                boolean useLetters = true;
+                boolean useNumbers = true;
+
+                try {
+                    String fileName = file.getOriginalFilename();
+                    String generatedString = RandomStringUtils.secure().next(length, useLetters, useNumbers);
+                    String final_photo_name = generatedString + fileName;
+                    String absolute_fileLocation = AppUtil.get_photo_upload_path(final_photo_name, PHOTOS_FOLDER_NAME, album_id);
+                    Path path = Paths.get(absolute_fileLocation);
+                    Files.copy(file.getInputStream(), path, StandardCopyOption.REPLACE_EXISTING);
+
+                    Photo photo = new Photo();
+                    photo.setName(fileName);
+                    photo.setFileName(final_photo_name);
+                    photo.setOriginalFileName(fileName);
+                    photo.setAlbum(album);
+                    photoService.save(photo);
+
+                    PhotoViewDTO photoViewDTO = new PhotoViewDTO(photo.getId(), photo.getName(), photo.getDescription());
+                    fileNamesWithSuccess.add(photoViewDTO);
+                    BufferedImage thumbImg = AppUtil.getThumbnail(file, THUMBNAIL_WIDTH);
+                    File thumbnail_location = new File(AppUtil.get_photo_upload_path(final_photo_name, THUMBNAIL_FOLDER_NAME, album_id));
+                    ImageIO.write(thumbImg, file.getContentType().split("/")[1], thumbnail_location);
+
+                } catch (Exception e) {
+                    log.debug(AlbumError.PHOTO_UPLOAD_ERROR.toString() + ": " + e.getMessage());
+                    fileNamesWithError.add(file.getOriginalFilename());
+                }
+            } else {
+                fileNamesWithError.add(file.getOriginalFilename());
+            }
+        });
+
+        HashMap<String, List<?>> result = new HashMap<>();
+        result.put("SUCCESS", fileNamesWithSuccess);
+        result.put("ERRORS", fileNamesWithError);
+
+        List<HashMap<String, List<?>>> response = new ArrayList<>();
+        response.add(result);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/albums/{album_id}/photos/{photo_id}/download-photo")
     @SecurityRequirement(name = "demo-api")
     public ResponseEntity<?> downloadPhoto(@PathVariable("album_id") long album_id, @PathVariable("photo_id") long photo_id, Authentication authentication) {
         return downloadFile(album_id, photo_id, PHOTOS_FOLDER_NAME, authentication);
+    }
+
+    @GetMapping("/albums/{album_id}/photos/{photo_id}/download-thumbnail")
+    @SecurityRequirement(name = "demo-api")
+    public ResponseEntity<?> downloadThumbnail(@PathVariable("album_id") long album_id, @PathVariable("photo_id") long photo_id, Authentication authentication) {
+        return downloadFile(album_id, photo_id, THUMBNAIL_FOLDER_NAME, authentication);
     }
 
     public ResponseEntity<?> downloadFile(long album_id, long photo_id, String folder_name, Authentication authentication) {
@@ -430,7 +382,7 @@ public class AlbumController {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
             }
         } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
         }
 
         Optional<Photo> optionalPhoto = photoService.findById(photo_id);
@@ -460,31 +412,6 @@ public class AlbumController {
         } else {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
         }
-    }
-
-    @GetMapping("/public/thumbnails/{albumId}/{photoId}")
-    public ResponseEntity<Resource> getThumbnail(
-            @PathVariable long albumId,
-            @PathVariable long photoId
-    ) {
-        Photo photo = photoService.findById(photoId).orElseThrow();
-
-        if (photo.getAlbum().getId() != albumId) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
-
-        Resource resource = AppUtil.getFileAsResource(
-            albumId,
-            PHOTOS_FOLDER_NAME,
-            photo.getThumbnailFileName()
-        );
-        if (!resource.exists()) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok()
-            .contentType(MediaType.IMAGE_JPEG)
-            .cacheControl(CacheControl.maxAge(7, TimeUnit.DAYS))
-            .body(resource);
     }
 
 }

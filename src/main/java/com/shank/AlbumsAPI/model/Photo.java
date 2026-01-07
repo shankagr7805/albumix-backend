@@ -1,6 +1,4 @@
 package com.shank.AlbumsAPI.model;
-
-import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -31,9 +29,6 @@ public class Photo {
     private String originalFileName;
 
     private String fileName;
-
-    @Column(name = "thumbnail_file_name")
-    private String thumbnailFileName;   
 
     @ManyToOne
    @JoinColumn(name = "album_id", referencedColumnName = "id", nullable = false)

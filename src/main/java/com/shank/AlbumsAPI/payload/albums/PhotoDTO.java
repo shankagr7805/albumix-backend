@@ -19,6 +19,6 @@ public class PhotoDTO {
 
     private String description;
 
-    private String thumbnailUrl;
+    private String cloudinaryThumbnailUrl;
 
 }

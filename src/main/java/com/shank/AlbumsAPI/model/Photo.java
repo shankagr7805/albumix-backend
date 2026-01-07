@@ -21,7 +21,7 @@ import lombok.ToString;
 @NoArgsConstructor
 public class Photo {
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
 
     private String name;
@@ -32,10 +32,8 @@ public class Photo {
 
     private String fileName;
 
-    private String cloudinaryPublicId;
-
-    @Column(name = "cloudinary_thumbnail_url")
-    private String cloudinaryThumbnailUrl;
+    @Column(name = "thumbnail_file_name")
+    private String thumbnailFileName;   
 
     @ManyToOne
    @JoinColumn(name = "album_id", referencedColumnName = "id", nullable = false)

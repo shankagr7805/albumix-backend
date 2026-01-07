@@ -79,6 +79,7 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                     .requestMatchers("/api/v2/auth/token").permitAll()
                     .requestMatchers("/api/v2/auth/users/add").permitAll()
+                    .requestMatchers("/api/v2/public/thumbnails/**").permitAll()
                     .requestMatchers("/api/v2/auth/users").hasAuthority("SCOPE_ADMIN")
                     .requestMatchers("/api/v2/auth/users/{user_id}/update-authorities").hasAuthority("SCOPE_ADMIN")
                     .requestMatchers("/api/v2/auth/profile/**").authenticated()

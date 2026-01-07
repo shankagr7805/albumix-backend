@@ -1,8 +1,14 @@
 package com.shank.AlbumsAPI.controller;
 
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.nio.file.*;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.awt.Image;
+import java.awt.Graphics2D;
 
+import javax.imageio.ImageIO;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,8 +18,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.cloudinary.Cloudinary;
-import com.cloudinary.utils.ObjectUtils;
 import com.shank.AlbumsAPI.model.*;
 import com.shank.AlbumsAPI.payload.albums.*;
 import com.shank.AlbumsAPI.service.AccountService;
@@ -45,9 +49,6 @@ public class AlbumController {
 
     @Autowired
     private PhotoService photoService;
-
-    @Autowired
-    private Cloudinary cloudinary;
 
     @PostMapping(value = "/albums/add", consumes = "application/json")
     @ResponseStatus(HttpStatus.CREATED)
@@ -108,7 +109,7 @@ public class AlbumController {
                     photo.getId(),
                     photo.getName(),
                     photo.getDescription(),
-                    photo.getCloudinaryThumbnailUrl()
+                    "/api/v2/public/thumbnails/" + album.getId() + "/" + photo.getId()
                 ));
             }
             
@@ -152,7 +153,7 @@ public class AlbumController {
                 photo.setName(photoPayloadDTO.getName());
                 photo.setDescription(photoPayloadDTO.getDescription());
                 photoService.save(photo);
-                PhotoViewDTO photoViewDTO = new PhotoViewDTO(photo.getId(), photoPayloadDTO.getName(), photoPayloadDTO.getDescription(), photo.getCloudinaryThumbnailUrl());
+                PhotoViewDTO photoViewDTO = new PhotoViewDTO(photo.getId(), photoPayloadDTO.getName(), photoPayloadDTO.getDescription());
                 return ResponseEntity.ok(photoViewDTO);
             } else {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
@@ -189,13 +190,19 @@ public class AlbumController {
                     return ResponseEntity.status(HttpStatus.FORBIDDEN).body("An error occurred while deleting the photo.");
                 }
 
-                AppUtil.delete_photo_from_path(photo.getFileName(), PHOTOS_FOLDER_NAME, album_id);
-                if (photo.getCloudinaryPublicId() != null) {
-                    cloudinary.uploader().destroy(
-                        photo.getCloudinaryPublicId(),
-                        ObjectUtils.emptyMap()
-                    );
-                }
+                // delete original
+                AppUtil.delete_photo_from_path(
+                    photo.getFileName(),
+                    PHOTOS_FOLDER_NAME,
+                    album_id
+                );
+
+                // delete thumbnail
+                AppUtil.delete_photo_from_path(
+                    photo.getThumbnailFileName(),
+                    PHOTOS_FOLDER_NAME,
+                    album_id
+                );
 
                 photoService.delete(photo);  
 
@@ -226,7 +233,7 @@ public class AlbumController {
                     photo.getId(),
                     photo.getName(),
                     photo.getDescription(),
-                    photo.getCloudinaryThumbnailUrl()
+                    "/api/v2/public/thumbnails/" + album.getId() + "/" + photo.getId()
                 ));
             }
             albums.add(new AlbumViewDTO(album.getId(), album.getName(), album.getDescription(), photos));
@@ -261,7 +268,7 @@ public class AlbumController {
                 photo.getId(),
                 photo.getName(),
                 photo.getDescription(),
-                photo.getCloudinaryThumbnailUrl()
+                "/api/v2/public/thumbnails/" + album.getId() + "/" + photo.getId()
             ));
         }
         AlbumViewDTO albumViewDTO = new AlbumViewDTO(album.getId(), album.getName(), album.getDescription(), photos);
@@ -292,13 +299,19 @@ public class AlbumController {
 
             for(Photo photo : photoService.findByAlbumId(album.getId())) {
                 if(photo == null) continue;
-                AppUtil.delete_photo_from_path(photo.getFileName(), PHOTOS_FOLDER_NAME, album_id);
-                if (photo.getCloudinaryPublicId() != null) {
-                    cloudinary.uploader().destroy(
-                        photo.getCloudinaryPublicId(),
-                        ObjectUtils.emptyMap()
-                    );
-                }
+                // delete original
+                AppUtil.delete_photo_from_path(
+                    photo.getFileName(),
+                    PHOTOS_FOLDER_NAME,
+                    album_id
+                );
+
+                // delete thumbnail
+                AppUtil.delete_photo_from_path(
+                    photo.getThumbnailFileName(),
+                    PHOTOS_FOLDER_NAME,
+                    album_id
+                );
                 photoService.delete(photo);
             }
             albumService.deleteAlbum(album);
@@ -309,7 +322,6 @@ public class AlbumController {
         }
     }
 
-    @SuppressWarnings("null")
     @PostMapping(value = "/albums/{album_id}/upload-photos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Upload photo in album")
     @SecurityRequirement(name = "demo-api")
@@ -351,29 +363,43 @@ public class AlbumController {
                     StandardOpenOption.TRUNCATE_EXISTING
                 );
 
-                // 2️⃣ UPLOAD THUMBNAIL TO CLOUDINARY
-                Map<?, ?> cloudinaryResult = cloudinary.uploader().upload(
-                        bytes,
-                        ObjectUtils.asMap(
-                            "folder", "albumix/thumbnails/" + album_id,
-                            "transformation", ObjectUtils.asMap(
-                                "width", 300,
-                                "crop", "scale"
-                            )
-                        )
+                /* ---------- 2️⃣ THUMBNAIL GENERATE (LOCAL) ---------- */
+                BufferedImage originalImage = ImageIO.read(new ByteArrayInputStream(bytes));
+
+                int thumbWidth = 300;
+                int thumbHeight = (originalImage.getHeight() * thumbWidth) / originalImage.getWidth();
+
+                Image scaledImage = originalImage.getScaledInstance(
+                    thumbWidth,
+                    thumbHeight,
+                    Image.SCALE_SMOOTH
                 );
+
+                BufferedImage thumbnail = new BufferedImage(
+                    thumbWidth,
+                    thumbHeight,
+                    BufferedImage.TYPE_INT_RGB
+                );
+
+                Graphics2D g2d = thumbnail.createGraphics();
+                g2d.drawImage(scaledImage, 0, 0, null);
+                g2d.dispose();
+
+                String thumbName = "thumb_" + finalName;
+                String thumbPath = AppUtil.get_photo_upload_path(thumbName, PHOTOS_FOLDER_NAME, album_id);
+
+                ImageIO.write(thumbnail, "jpg", Paths.get(thumbPath).toFile());
 
                 // 3️⃣ SAVE DB
                 Photo photo = new Photo();
                 photo.setName(originalName);
                 photo.setOriginalFileName(originalName);
                 photo.setFileName(finalName);
-                photo.setCloudinaryPublicId(cloudinaryResult.get("public_id").toString());
-                photo.setCloudinaryThumbnailUrl(cloudinaryResult.get("secure_url").toString());
                 photo.setAlbum(album);
+                photo.setThumbnailFileName(thumbName);
 
                 photoService.save(photo);
-                success.add(new PhotoViewDTO(photo.getId(), photo.getName(), photo.getDescription(), photo.getCloudinaryThumbnailUrl()));
+                success.add(new PhotoViewDTO(photo.getId(), photo.getName(), photo.getDescription()));
 
             } catch (Exception e) {
                 log.error(AlbumError.PHOTO_UPLOAD_ERROR.toString(), e);
@@ -381,10 +407,8 @@ public class AlbumController {
             }
         }
 
-        return ResponseEntity.ok(Map.of(
-                "SUCCESS", success,
-                "ERRORS", errors
-        ));
+        return ResponseEntity.status(errors.isEmpty() ? HttpStatus.CREATED : HttpStatus.MULTI_STATUS)
+        .body(Map.of("SUCCESS", success, "ERRORS", errors));
     }
 
     @GetMapping("/albums/{album_id}/photos/{photo_id}/download-photo")
@@ -436,6 +460,31 @@ public class AlbumController {
         } else {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
         }
+    }
+
+    @GetMapping("/public/thumbnails/{albumId}/{photoId}")
+    public ResponseEntity<Resource> getThumbnail(
+            @PathVariable long albumId,
+            @PathVariable long photoId
+    ) {
+        Photo photo = photoService.findById(photoId).orElseThrow();
+
+        if (photo.getAlbum().getId() != albumId) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        Resource resource = AppUtil.getFileAsResource(
+            albumId,
+            PHOTOS_FOLDER_NAME,
+            photo.getThumbnailFileName()
+        );
+        if (!resource.exists()) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok()
+            .contentType(MediaType.IMAGE_JPEG)
+            .cacheControl(CacheControl.maxAge(7, TimeUnit.DAYS))
+            .body(resource);
     }
 
 }

@@ -2,6 +2,7 @@ package com.shank.AlbumsAPI.controller;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.*;
 import java.util.*;
 
@@ -14,6 +15,7 @@ import org.springframework.http.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.shank.AlbumsAPI.model.*;
 import com.shank.AlbumsAPI.payload.albums.*;
@@ -370,48 +372,57 @@ public class AlbumController {
     }
 
     public ResponseEntity<?> downloadFile(long album_id, long photo_id, String folder_name, Authentication authentication) {
+        // 1️⃣ AUTH CHECK
         String email = authentication.getName();
-        Optional<Account> optionalAccount = accountService.findByEmail(email);
-        Account account = optionalAccount.get();
+        Account account = accountService.findByEmail(email).orElseThrow();
 
-        Optional<Album> optionalAlbum = albumService.findById(album_id);
-        Album album;
-        if (optionalAlbum.isPresent()) {
-            album = optionalAlbum.get();
-            if (account.getId() != album.getAccount().getId()) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
-            }
-        } else {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        Album album = albumService.findById(album_id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST));
+
+        if (account.getId() != album.getAccount().getId()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
 
-        Optional<Photo> optionalPhoto = photoService.findById(photo_id);
-        if (optionalPhoto.isPresent()) {
-            Photo photo = optionalPhoto.get();
+        // 2️⃣ PHOTO CHECK
+        Photo photo = photoService.findById(photo_id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST));
 
-            if(photo.getAlbum().getId() != album_id) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
-            }
-
-            Resource resource = null;
-            try {
-                resource = AppUtil.getFileAsResource(album_id, folder_name, photo.getFileName());
-            } catch (Exception e) {
-                return ResponseEntity.internalServerError().build();
-            }
-            if (resource == null) {
-                return new ResponseEntity<>("File not found", HttpStatus.NOT_FOUND);
-            }
-            String contentType = "application/octet-stream";
-            String headerValue = "attachment; filename=\"" + photo.getOriginalFileName() + "\"";
-
-            return ResponseEntity.ok()
-                    .contentType(MediaType.parseMediaType(contentType))
-                    .header(HttpHeaders.CONTENT_DISPOSITION, headerValue)
-                    .body(resource);
-        } else {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        if (photo.getAlbum().getId() != album_id) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
+
+        // 3️⃣ LOAD FILE
+        Resource resource;
+        try {
+            resource = AppUtil.getFileAsResource(album_id, folder_name, photo.getFileName());
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+
+        if (resource == null || !resource.exists()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("File not found");
+        }
+
+        // 4️⃣ DETECT CONTENT TYPE (SAFE)
+        String contentType = "application/octet-stream";
+        try {
+            contentType = Files.probeContentType(
+                    Path.of(resource.getFile().getAbsolutePath())
+            );
+        } catch (IOException ignored) {}
+
+        if (contentType == null) {
+            contentType = "application/octet-stream";
+        }
+
+        // 5️⃣ RETURN FILE
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(contentType))
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + photo.getOriginalFileName() + "\""
+                )
+                .body(resource);
     }
 
 }

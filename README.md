@@ -47,7 +47,7 @@ It provides **secure authentication**, **album & photo management**, and **Cloud
 ### 📁 Album Management
 - Create albums
 - Update album details
-- Delete albums
+- te albums
 - Fetch all albums of logged-in user
 
 ### 🖼️ Photo Management

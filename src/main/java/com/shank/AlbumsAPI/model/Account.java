@@ -1,5 +1,7 @@
 package com.shank.AlbumsAPI.model;
 
+import java.io.Serializable;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -13,7 +15,7 @@ import lombok.ToString;
 @Getter
 @Setter
 @ToString
-public class Account {
+public class Account implements Serializable {
     
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
@@ -25,4 +27,5 @@ public class Account {
     private String password;
 
     private String Authorities;
+    private static final long serialVersionUID = 1L;
 }

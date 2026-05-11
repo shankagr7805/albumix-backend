@@ -6,6 +6,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import io.swagger.v3.oas.annotations.enums.*;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
 
+import org.springframework.cache.annotation.EnableCaching;
+@EnableCaching
 @SpringBootApplication
 @SecurityScheme(name = "demo-api", scheme = "bearer", type = SecuritySchemeType.HTTP, in = SecuritySchemeIn.HEADER)
 public class AlbumsAPIApplication {

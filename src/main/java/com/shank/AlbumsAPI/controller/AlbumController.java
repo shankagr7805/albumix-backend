@@ -1,12 +1,7 @@
 package com.shank.AlbumsAPI.controller;
-
-import java.awt.image.BufferedImage;
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
 import java.util.*;
-
-import javax.imageio.ImageIO;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +17,7 @@ import com.shank.AlbumsAPI.payload.albums.*;
 import com.shank.AlbumsAPI.service.AccountService;
 import com.shank.AlbumsAPI.service.AlbumService;
 import com.shank.AlbumsAPI.service.PhotoService;
+import com.shank.AlbumsAPI.service.ThumbnailService;
 import com.shank.AlbumsAPI.util.apputils.AppUtil;
 import com.shank.AlbumsAPI.util.constants.AlbumError;
 
@@ -41,6 +37,9 @@ public class AlbumController {
     static final String PHOTOS_FOLDER_NAME = "photos";
     static final String THUMBNAIL_FOLDER_NAME = "thumbnails";
     static final int THUMBNAIL_WIDTH = 300;
+
+    @Autowired
+    private ThumbnailService thumbnailService;
 
     @Autowired
     private AccountService accountService;
@@ -337,9 +336,12 @@ public class AlbumController {
 
                     PhotoViewDTO photoViewDTO = new PhotoViewDTO(photo.getId(), photo.getName(), photo.getDescription());
                     fileNamesWithSuccess.add(photoViewDTO);
-                    BufferedImage thumbImg = AppUtil.getThumbnail(file, THUMBNAIL_WIDTH);
-                    File thumbnail_location = new File(AppUtil.get_photo_upload_path(final_photo_name, THUMBNAIL_FOLDER_NAME, album_id));
-                    ImageIO.write(thumbImg, file.getContentType().split("/")[1], thumbnail_location);
+                    thumbnailService.generateThumbnail(
+                            file,
+                            final_photo_name,
+                            album_id,
+                            THUMBNAIL_WIDTH
+                    );
 
                 } catch (Exception e) {
                     log.debug(AlbumError.PHOTO_UPLOAD_ERROR.toString() + ": " + e.getMessage());

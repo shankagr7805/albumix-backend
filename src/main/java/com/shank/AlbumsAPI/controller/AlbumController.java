@@ -303,8 +303,9 @@ public class AlbumController {
                     photo.setOriginalFileName(fileName);
                     photo.setAlbum(album);
                     photoService.save(photo);
+                    byte[] fileBytes = file.getBytes();
                     fileNamesWithSuccess.add(new PhotoViewDTO(photo.getId(), photo.getName(), photo.getDescription()));
-                    thumbnailService.generateThumbnail(file, final_photo_name, album_id, THUMBNAIL_WIDTH);
+                    thumbnailService.generateThumbnail(fileBytes, contentType, final_photo_name, album_id, THUMBNAIL_WIDTH);
                     evictAlbumsCache(account.getId());
                 } catch (Exception e) {
                     log.debug(AlbumError.PHOTO_UPLOAD_ERROR.toString() + ": " + e.getMessage());

@@ -1,5 +1,9 @@
 version: '3.8'
 services:
+
+  albumix-backend:
+    volumes:
+      - albumix-uploads:/opt/albumix/uploads
   mysql:
     image: mysql:8
     environment:
@@ -19,3 +23,4 @@ services:
 
 volumes:
   albumix_mysql:
+  albumix-uploads:

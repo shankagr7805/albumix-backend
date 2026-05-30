@@ -1,5 +1,6 @@
 package com.shank.AlbumsAPI.payload.albums;
 
+import java.io.Serializable;
 import java.util.List;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -16,7 +17,8 @@ import lombok.ToString;
 @ToString
 @AllArgsConstructor
 @NoArgsConstructor
-public class AlbumViewDTO {
+public class AlbumViewDTO implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     private long id;
 

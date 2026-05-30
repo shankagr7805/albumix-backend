@@ -10,24 +10,17 @@ import org.springframework.stereotype.Service;
 import com.shank.AlbumsAPI.model.Album;
 import com.shank.AlbumsAPI.repository.AlbumRepository;
 
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.cache.annotation.Caching;
-import org.springframework.cache.annotation.CacheEvict;
-
 @Service
 public class AlbumService {
+
     @Autowired
     private AlbumRepository albumRepository;
 
-    @CacheEvict(value = "albums", allEntries = true)
     public Album save(Album album) {
-        if (album == null) {
-            throw new IllegalArgumentException("Album cannot be null");
-        }
+        if (album == null) throw new IllegalArgumentException("Album cannot be null");
         return albumRepository.save(album);
     }
 
-    @Cacheable(value = "albums", key = "#id")
     public List<Album> findByAccount_id(long id) {
         return albumRepository.findByAccount_id(id);
     }
@@ -36,10 +29,6 @@ public class AlbumService {
         return albumRepository.findById(id);
     }
 
-    @Caching(evict = {
-        @CacheEvict(value = "albums", allEntries = true),
-        @CacheEvict(value = "album", allEntries = true)
-    })
     public void deleteAlbum(@NonNull Album album) {
         albumRepository.delete(album);
     }

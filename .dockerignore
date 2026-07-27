@@ -1,0 +1,6 @@
+target/
+.git/
+.vscode/
+*.md
+application-local.properties
+.env

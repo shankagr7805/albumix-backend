@@ -52,12 +52,12 @@ public class AuthController {
     @Autowired
     private TokenService tokenService;
 
-    @Autowired
-    private AccountService accountService;
+    private final AccountService accountService;
 
-    public AuthController(TokenService tokenService, AuthenticationManager authenticationManager) {
+    public AuthController(TokenService tokenService, AuthenticationManager authenticationManager, AccountService accountService) {
         this.tokenService = tokenService;
         this.authenticationManager = authenticationManager;
+        this.accountService = accountService;
     }
 
     @PostMapping("/token")

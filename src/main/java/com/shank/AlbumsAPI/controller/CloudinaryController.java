@@ -3,7 +3,6 @@ package com.shank.AlbumsAPI.controller;
 import java.io.IOException;
 import java.util.Map;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -24,8 +23,11 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 @SecurityRequirement(name = "demo-api") // 🔐 JWT required in Swagger
 public class CloudinaryController {
 
-    @Autowired
-    private Cloudinary cloudinary;
+    private final Cloudinary cloudinary;
+
+    CloudinaryController(Cloudinary cloudinary) {
+        this.cloudinary = cloudinary;
+    }
 
     // ===============================
     // Upload Image

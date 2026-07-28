@@ -6,7 +6,6 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang3.RandomStringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.*;
@@ -41,11 +40,19 @@ public class AlbumController {
     static final String THUMBNAIL_FOLDER_NAME = "thumbnails";
     static final int THUMBNAIL_WIDTH = 300;
 
-    @Autowired private ThumbnailService thumbnailService;
-    @Autowired private AccountService accountService;
-    @Autowired private AlbumService albumService;
-    @Autowired private PhotoService photoService;
-    @Autowired private RedisTemplate<String, Object> redisTemplate;
+    private final ThumbnailService thumbnailService;
+    private final AccountService accountService;
+    private final AlbumService albumService;
+    private final PhotoService photoService;
+    private final RedisTemplate<String, Object> redisTemplate;
+
+    AlbumController(ThumbnailService thumbnailService, AccountService accountService, AlbumService albumService, PhotoService photoService, RedisTemplate<String, Object> redisTemplate) {
+        this.thumbnailService = thumbnailService;
+        this.accountService = accountService;
+        this.albumService = albumService;
+        this.photoService = photoService;
+        this.redisTemplate = redisTemplate;
+    }
 
     // ── helpers ──────────────────────────────────────────────
     private String albumsCacheKey(long accountId) {
@@ -295,7 +302,8 @@ public class AlbumController {
                     String generatedString = RandomStringUtils.secure().next(10, true, true);
                     String final_photo_name = generatedString + fileName;
                     String absolute_fileLocation = AppUtil.get_photo_upload_path(final_photo_name, PHOTOS_FOLDER_NAME, album_id);
-                    Files.copy(file.getInputStream(), Paths.get(absolute_fileLocation), StandardCopyOption.REPLACE_EXISTING);
+                    byte[] fileBytes = file.getBytes();
+                    Files.copy(new java.io.ByteArrayInputStream(fileBytes), Paths.get(absolute_fileLocation), StandardCopyOption.REPLACE_EXISTING);
 
                     Photo photo = new Photo();
                     photo.setName(fileName);
@@ -303,7 +311,6 @@ public class AlbumController {
                     photo.setOriginalFileName(fileName);
                     photo.setAlbum(album);
                     photoService.save(photo);
-                    byte[] fileBytes = file.getBytes();
                     fileNamesWithSuccess.add(new PhotoViewDTO(photo.getId(), photo.getName(), photo.getDescription()));
                     thumbnailService.generateThumbnail(fileBytes, contentType, final_photo_name, album_id, THUMBNAIL_WIDTH);
                     evictAlbumsCache(account.getId());

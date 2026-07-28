@@ -1,6 +1,5 @@
 package com.shank.AlbumsAPI.config;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
@@ -11,8 +10,11 @@ import com.shank.AlbumsAPI.util.constants.Authority;
 @Component
 public class SeedData implements CommandLineRunner {
 
-    @Autowired
-    private AccountService accountService;
+    private final AccountService accountService;
+
+    SeedData(AccountService accountService) {
+        this.accountService = accountService;
+    }
 
     @Override
     public void run(String... args) {
